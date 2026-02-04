@@ -6,12 +6,11 @@ in vec3 Position;
 
 uniform vec3 cameraPos;
 uniform samplerCube skybox;
+uniform float IOR;
+uniform float dispersion;
 
 void main()
 {
-    float IOR = 1.5;             //green channel reflection
-    float dispersion = 0.02;
-
     vec3 I = normalize(Position - cameraPos);
     vec3 N = normalize(Normal);
 

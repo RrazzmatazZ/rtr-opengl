@@ -6,10 +6,11 @@ in vec3 Position;
 
 uniform vec3 cameraPos;
 uniform samplerCube skybox;
+uniform float IOR;
+uniform float dispersion;
 
 void main()
 {
-    float IOR = 1.5;
     vec3 I = normalize(Position - cameraPos);
     vec3 N = normalize(Normal);
 
@@ -19,8 +20,18 @@ void main()
     vec3 reflectDir = reflect(I, N);
     vec3 reflectionColor = texture(skybox, reflectDir).rgb;
 
-    vec3 refractDir = refract(I, N, 1.0 / IOR);
-    vec3 refractionColor = texture(skybox, refractDir).rgb;
+    float etaR = 1.0 / (IOR - dispersion);
+    float etaG = 1.0 / IOR;
+    float etaB = 1.0 / (IOR + dispersion);
+
+    vec3 refractDirR = refract(I, N, etaR);
+    vec3 refractDirG = refract(I, N, etaG);
+    vec3 refractDirB = refract(I, N, etaB);
+
+    float r = texture(skybox, refractDirR).r;
+    float g = texture(skybox, refractDirG).g;
+    float b = texture(skybox, refractDirB).b;
+    vec3 refractionColor = vec3(r, g, b);
 
     vec3 finalColor = mix(refractionColor, reflectionColor, fresnel);
 
