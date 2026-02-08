@@ -20,7 +20,7 @@ void main()
     vec3 reflectDir = reflect(I, N);
     vec3 reflectionColor = texture(skybox, reflectDir).rgb;
 
-    float etaR = 1.0 / (IOR - dispersion);
+    float etaR = 1.0 / max(IOR - dispersion, 0.001); //avoid infinity value
     float etaG = 1.0 / IOR;
     float etaB = 1.0 / (IOR + dispersion);
 

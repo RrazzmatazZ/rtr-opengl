@@ -41,10 +41,10 @@ float cameraDistance = 10.0f;
 int renderMode = 1;
 
 std::vector<std::string> skybox_dirs = {
-    "CNTower", "ForbiddenCity", "GamlaStan", "GamlaStan2",
+    "ForbiddenCity", "GamlaStan", "GamlaStan2",
     "Medborgarplatsen", "Parliament", "Roundabout", "UnionSquare",
     "SaintLazarusChurch", "SaintLazarusChurch2", "SaintLazarusChurch3",
-    "Sodermalmsallen", "Sodermalmsallen2"
+    "Sodermalmsallen", "CNTower", "Sodermalmsallen2"
 };
 
 //manage parameters
@@ -284,7 +284,7 @@ int main()
         }
         {
             // Ring Row
-            glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 10.0f, -5.0f));
+            glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(6.0f, 10.0f, -5.0f));
             model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
             if (renderMode == 1)
             {
@@ -333,7 +333,7 @@ int main()
         }
 
         {
-            glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(4.0f, 10.0f, -5.0f));
+            glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(8.0f, 10.0f, -5.0f));
             model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
             // Disco Row
             if (renderMode == 1)
@@ -383,7 +383,7 @@ int main()
         }
 
         {
-            glm::mat4 diamondModel = glm::translate(glm::mat4(1.0f), glm::vec3(6.0f, 10.0f, -5.0f));
+            glm::mat4 diamondModel = glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 10.0f, -5.0f));
             diamondModel = glm::rotate(diamondModel, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
             diamondModel = glm::scale(diamondModel, glm::vec3(0.01f));
             if (renderMode == 1)
