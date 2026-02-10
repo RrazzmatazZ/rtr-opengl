@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 cmake_policy(VERSION 3.0)
 
 set(PROJECT
-        assignment2
+        assignment3
 )
 
 project(${PROJECT})
@@ -116,6 +116,11 @@ function(create_project_from_sources chapter)
             "src/${chapter}/*.obj"
             "src/${chapter}/*.glb"
             "src/${chapter}/*.tga"
+            "src/${chapter}/*.jpg"
+            "src/${chapter}/*.png"
+            "src/${chapter}/*.exr"
+            "src/${chapter}/*.gltf"
+            "src/${chapter}/*.bin"
     )
     set(NAME "${chapter}")
     add_executable(${NAME} ${SOURCE})
@@ -147,6 +152,11 @@ function(create_project_from_sources chapter)
             "src/${chapter}/*.obj"
             "src/${chapter}/*.glb"
             "src/${chapter}/*.tga"
+            "src/${chapter}/*.jpg"
+            "src/${chapter}/*.png"
+            "src/${chapter}/*.exr"
+            "src/${chapter}/*.gltf"
+            "src/${chapter}/*.bin"
     )
     # copy dlls
     file(GLOB DLLS "dlls/*.dll")

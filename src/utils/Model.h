@@ -32,6 +32,8 @@ public:
 
     void Draw(glm::mat4 model, glm::mat4 view, glm::mat4 projection);
 
+    void AddTexture(std::string const &path, std::string typeName);
+
 private:
     const aiScene* scene_ptr;
 
@@ -42,5 +44,6 @@ private:
     
     unsigned int TextureFromMemory(const aiTexture* aiTex);
     unsigned int TextureFromFile(const char *path, const std::string &directory);
+    unsigned int TextureFromFileAbsolutePath(const char *path);
 };
 #endif

@@ -29,6 +29,27 @@ void Model::Draw(glm::mat4 model, glm::mat4 view, glm::mat4 projection)
         meshes[i].Draw(*modelShader);
 }
 
+void Model::AddTexture(std::string const &path, std::string typeName)
+{
+    unsigned int id = TextureFromFileAbsolutePath(path.c_str());
+    if (id == 0) {
+        std::cout << "Failed to manually load texture: " << path << std::endl;
+        return;
+    }
+
+    Texture texture;
+    texture.id = id;
+    texture.type = typeName;
+    texture.path = path;
+
+    textures_loaded.push_back(texture);
+
+    for(unsigned int i = 0; i < meshes.size(); i++)
+    {
+        meshes[i].textures.push_back(texture);
+    }
+}
+
 void Model::loadModel(std::string const &path)
 {
     Assimp::Importer importer;
@@ -246,6 +267,41 @@ unsigned int Model::TextureFromFile(const char *path, const std::string &directo
     {
         std::cout << "Texture failed to load at path: " << filename << std::endl;
         stbi_image_free(data);
+    }
+    return textureID;
+}
+
+unsigned int Model::TextureFromFileAbsolutePath(const char *path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    // stbi_load 可以直接处理绝对路径
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1) format = GL_RED;
+        else if (nrComponents == 3) format = GL_RGB;
+        else if (nrComponents == 4) format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+        return 0; // 返回 0 表示失败
     }
     return textureID;
 }
