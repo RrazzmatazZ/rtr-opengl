@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <iostream>
 
-Model::Model(std::string const &path, const char* vsPath, const char* fsPath, bool gamma)
+Model::Model(std::string const& path, const char* vsPath, const char* fsPath, bool gamma)
     : gammaCorrection(gamma)
 {
     modelShader = new Shader(vsPath, fsPath);
@@ -25,14 +25,15 @@ void Model::Draw(glm::mat4 model, glm::mat4 view, glm::mat4 projection)
     modelShader->setMat4("view", view);
     modelShader->setMat4("model", model);
 
-    for(unsigned int i = 0; i < meshes.size(); i++)
+    for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].Draw(*modelShader);
 }
 
-void Model::AddTexture(std::string const &path, std::string typeName)
+void Model::AddTexture(std::string const& path, std::string typeName)
 {
     unsigned int id = TextureFromFileAbsolutePath(path.c_str());
-    if (id == 0) {
+    if (id == 0)
+    {
         std::cout << "Failed to manually load texture: " << path << std::endl;
         return;
     }
@@ -44,18 +45,35 @@ void Model::AddTexture(std::string const &path, std::string typeName)
 
     textures_loaded.push_back(texture);
 
-    for(unsigned int i = 0; i < meshes.size(); i++)
+    for (unsigned int i = 0; i < meshes.size(); i++)
     {
         meshes[i].textures.push_back(texture);
     }
 }
 
-void Model::loadModel(std::string const &path)
+
+void Model::AddTexture(int textureId, std::string typeName)
+{
+    Texture texture;
+    texture.id = (unsigned int)textureId;
+    texture.type = typeName;
+    texture.path = "procedural_custom_" + std::to_string(textureId);
+
+    textures_loaded.push_back(texture);
+
+    for (unsigned int i = 0; i < meshes.size(); i++)
+    {
+        meshes[i].textures.push_back(texture);
+    }
+}
+
+void Model::loadModel(std::string const& path)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(
+        path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
-    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
         return;
@@ -68,27 +86,27 @@ void Model::loadModel(std::string const &path)
     scene_ptr = nullptr;
 }
 
-void Model::processNode(aiNode *node, const aiScene *scene)
+void Model::processNode(aiNode* node, const aiScene* scene)
 {
-    for(unsigned int i = 0; i < node->mNumMeshes; i++)
+    for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         meshes.push_back(processMesh(mesh, scene));
     }
-    for(unsigned int i = 0; i < node->mNumChildren; i++)
+    for (unsigned int i = 0; i < node->mNumChildren; i++)
     {
         processNode(node->mChildren[i], scene);
     }
 }
 
-Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
+Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
 
     // 1. Vertices
-    for(unsigned int i = 0; i < mesh->mNumVertices; i++)
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
         Vertex vertex;
         glm::vec3 vector;
@@ -98,7 +116,7 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
         vector.z = mesh->mVertices[i].z;
         vertex.Position = vector;
 
-        if(mesh->HasNormals())
+        if (mesh->HasNormals())
         {
             vector.x = mesh->mNormals[i].x;
             vector.y = mesh->mNormals[i].y;
@@ -106,7 +124,7 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
             vertex.Normal = vector;
         }
 
-        if(mesh->mTextureCoords[0])
+        if (mesh->mTextureCoords[0])
         {
             glm::vec2 vec;
             vec.x = mesh->mTextureCoords[0][i].x;
@@ -133,10 +151,10 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
     }
 
     // 2. Indices
-    for(unsigned int i = 0; i < mesh->mNumFaces; i++)
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++)
     {
         aiFace face = mesh->mFaces[i];
-        for(unsigned int j = 0; j < face.mNumIndices; j++)
+        for (unsigned int j = 0; j < face.mNumIndices; j++)
             indices.push_back(face.mIndices[j]);
     }
 
@@ -158,18 +176,18 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
     return Mesh(vertices, indices, textures);
 }
 
-std::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName)
+std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
 {
     std::vector<Texture> textures;
-    for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
     {
         aiString str;
         mat->GetTexture(type, i, &str);
 
         bool skip = false;
-        for(unsigned int j = 0; j < textures_loaded.size(); j++)
+        for (unsigned int j = 0; j < textures_loaded.size(); j++)
         {
-            if(std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
+            if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
             {
                 textures.push_back(textures_loaded[j]);
                 skip = true;
@@ -177,14 +195,17 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType 
             }
         }
 
-        if(!skip)
+        if (!skip)
         {
             Texture texture;
             const aiTexture* embeddedTex = scene_ptr->GetEmbeddedTexture(str.C_Str());
 
-            if (embeddedTex) {
+            if (embeddedTex)
+            {
                 texture.id = TextureFromMemory(embeddedTex);
-            } else {
+            }
+            else
+            {
                 texture.id = TextureFromFile(str.C_Str(), this->directory);
             }
 
@@ -203,12 +224,14 @@ unsigned int Model::TextureFromMemory(const aiTexture* aiTex)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
-    unsigned char *data = nullptr;
+    unsigned char* data = nullptr;
 
     if (aiTex->mHeight == 0)
-        data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(aiTex->pcData), aiTex->mWidth, &width, &height, &nrComponents, 0);
+        data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(aiTex->pcData), aiTex->mWidth, &width, &height,
+                                     &nrComponents, 0);
     else
-        data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(aiTex->pcData), aiTex->mWidth * aiTex->mHeight, &width, &height, &nrComponents, 0);
+        data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(aiTex->pcData), aiTex->mWidth * aiTex->mHeight,
+                                     &width, &height, &nrComponents, 0);
 
     if (data)
     {
@@ -235,7 +258,7 @@ unsigned int Model::TextureFromMemory(const aiTexture* aiTex)
     return textureID;
 }
 
-unsigned int Model::TextureFromFile(const char *path, const std::string &directory)
+unsigned int Model::TextureFromFile(const char* path, const std::string& directory)
 {
     std::filesystem::path fullPath = std::filesystem::path(directory) / path;
     std::string filename = fullPath.string();
@@ -244,7 +267,7 @@ unsigned int Model::TextureFromFile(const char *path, const std::string &directo
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
-    unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+    unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
     if (data)
     {
         GLenum format;
@@ -271,14 +294,14 @@ unsigned int Model::TextureFromFile(const char *path, const std::string &directo
     return textureID;
 }
 
-unsigned int Model::TextureFromFileAbsolutePath(const char *path)
+unsigned int Model::TextureFromFileAbsolutePath(const char* path)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
-    // stbi_load 可以直接处理绝对路径
-    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    // stbi_load
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
         GLenum format;
@@ -301,7 +324,7 @@ unsigned int Model::TextureFromFileAbsolutePath(const char *path)
     {
         std::cout << "Texture failed to load at path: " << path << std::endl;
         stbi_image_free(data);
-        return 0; // 返回 0 表示失败
+        return 0;
     }
     return textureID;
 }

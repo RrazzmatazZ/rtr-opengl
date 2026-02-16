@@ -34,6 +34,8 @@ public:
 
     void AddTexture(std::string const &path, std::string typeName);
 
+    void AddTexture(int textureId, std::string typeName);
+
 private:
     const aiScene* scene_ptr;
 

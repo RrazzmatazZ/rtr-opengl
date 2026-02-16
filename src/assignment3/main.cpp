@@ -40,9 +40,15 @@ glm::vec3 rightPos = glm::vec3(1.5f, 0.0f, 0.0f);
 glm::vec3 midPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 
-int mappingMode = 0;
+int mappingMode = 0; // 0: None, 1: Bump, 2: Normal
 float bumpScale = 1.0f;
 int rotateMode = 0;
+
+int shadingMode = 0; // 0: Blinn-Phong, 1: Cook-Torrance
+float roughness = 0.5f;
+float metallic = 0.1f;
+float kS_Blinn = 0.5f;
+float shininess = 32.0f;
 
 int main()
 {
@@ -54,7 +60,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(window_width, window_height, "Real-time Rendering Assignment2",NULL,NULL);
+    GLFWwindow* window = glfwCreateWindow(window_width, window_height, "Real-time Rendering - Assignment3",NULL,NULL);
 
     if (!window)
     {
@@ -84,7 +90,7 @@ int main()
 #pragma endregion imgui
 
 
-    Model metalCup = Model(RE("teacup.obj"),RE("metal/shader.vs"),RE("metal/shader.fs"));
+    Model metalCup = Model(RE("metal/metal_plate_2k.gltf"),RE("metal/shader.vs"),RE("metal/shader.fs"));
     metalCup.AddTexture(RE("metal/textures/metal_plate_nor_gl_2k.jpg"), "texture_normal");
     metalCup.AddTexture(RE("metal/textures/metal_plate_diff_2k.jpg"), "texture_diffuse");
 
@@ -131,11 +137,26 @@ int main()
 
         {
             ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-            ImGui::SetNextWindowSize(ImVec2(380, 280), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(400, 280), ImGuiCond_Always);
             ImGui::Begin("Shading Parameters");
-            ImGui::Text("Shading Parameters:");
+            ImGui::Text("Global Configuration:");
 
-            ImGui::Text("Mapping Mode:");
+            ImGui::Separator();
+            ImGui::Text("Lighting Model:");
+            ImGui::RadioButton("Blinn-Phong", &shadingMode, 0);
+            ImGui::SameLine();
+            ImGui::RadioButton("Cook-Torrance (PBR)", &shadingMode, 1);
+
+            if (shadingMode != 0)
+            {
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.5f, 1.0f), "PBR Settings:");
+                ImGui::SliderFloat("Roughness", &roughness, 0.05f, 10.0f);
+                ImGui::SliderFloat("Metallic", &metallic, 0.0f, 1.0f);
+            }
+
+
+            ImGui::Separator();
+            ImGui::Text("Detail Mapping:");
             ImGui::RadioButton("None", &mappingMode, 0);
             ImGui::SameLine();
             ImGui::RadioButton("Bump", &mappingMode, 1);
@@ -144,13 +165,14 @@ int main()
 
             if (mappingMode == 1)
             {
-                ImGui::SliderFloat("bump scale Value", &bumpScale, 0.0f, 50.0f, "%.3f", ImGuiSliderFlags_NoInput);
+                ImGui::SliderFloat("Bump Scale", &bumpScale, 0.0f, 50.0f, "%.3f");
             }
 
-            ImGui::Text("Rotation Mode:");
+            ImGui::Separator();
+            ImGui::Text("Rotation:");
             ImGui::RadioButton("Object Rotation", &rotateMode, 0);
             ImGui::SameLine();
-            ImGui::RadioButton("Camera revolution", &rotateMode, 1);
+            ImGui::RadioButton("Camera Orbit", &rotateMode, 1);
 
             ImGui::End();
         }
@@ -161,50 +183,52 @@ int main()
 
         float angle = static_cast<float>(glfwGetTime()) * 8.0f;
 
+        auto setupShader = [&](Shader* s)
+        {
+            s->setVec3("lightPos", lightPos + midPos);
+            s->setInt("mappingMode", mappingMode);
+            s->setFloat("bumpScale", bumpScale);
+            s->setInt("shadingMode", shadingMode);
+            s->setFloat("roughness", roughness);
+            s->setFloat("metallic", metallic);
+            s->setFloat("specularStrength", kS_Blinn);
+            s->setFloat("shininess", shininess);
+        };
+
         {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, midPos);
-            if (rotateMode == 0)
-            {
-                model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
-            }
+            if (rotateMode == 0) model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
             model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+
             Renderer::Submit(metalCup, model, [&](Shader* s)
             {
                 s->setVec3("lightPos", lightPos + midPos);
-                s->setInt("mappingMode", mappingMode);
-                s->setFloat("bumpScale", bumpScale);
+                setupShader(s);
             });
         }
         {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, leftPos);
-            if (rotateMode == 0)
-            {
-                float angle = static_cast<float>(glfwGetTime()) * 8.0f;
-                model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
-            }
+            if (rotateMode == 0) model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
             model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+
             Renderer::Submit(rockCup, model, [&](Shader* s)
             {
                 s->setVec3("lightPos", lightPos + leftPos);
-                s->setInt("mappingMode", mappingMode);
-                s->setFloat("bumpScale", bumpScale);
+                setupShader(s);
             });
         }
         {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, rightPos);
-            if (rotateMode == 0)
-            {
-                model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
-            }
+            if (rotateMode == 0) model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
             model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+
             Renderer::Submit(woodCup, model, [&](Shader* s)
             {
                 s->setVec3("lightPos", lightPos + rightPos);
-                s->setInt("mappingMode", mappingMode);
-                s->setFloat("bumpScale", bumpScale);
+                setupShader(s);
             });
         }
 
