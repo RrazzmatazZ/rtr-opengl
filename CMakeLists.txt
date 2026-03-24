@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 cmake_policy(VERSION 3.0)
 
 set(PROJECT
-        assignment4
+        assignment5
 )
 
 project(${PROJECT})
