@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec3 aPos;
 
-// 仅向 Fragment Shader 传递世界坐标，用于高度可视化
+// Only pass world coordinates to the fragment shader for height visualization.
 out vec3 WorldPos;
 
 const int NUM_WAVES = 60;
@@ -33,7 +33,7 @@ void main() {
 
     vec3 displacement = vec3(0.0);
 
-    // 纯粹的几何位移累加
+    // Accumulation of geometric displacements only
     for(int i = 0; i < NUM_WAVES; ++i) {
         float k_x = u_Waves[i].x;
         float k_y = u_Waves[i].y;

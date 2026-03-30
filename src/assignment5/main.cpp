@@ -120,11 +120,11 @@ Mesh createOceanGrid(int resolution, float size)
 
 
 float windSpeed = 20.0f;
-int numWaves = 100;
+int numWaves = 5000;
 float minWave  = 1.0f;
-float maxWave  = 100.f;
-float amplitudeAmplify = 10.0f;
-float timespec = 1.0f;
+float maxWave  = 20.f;
+float amplitudeAmplify = 5.0f;
+float timespec = 0.5f;
 
 
 int main()
@@ -157,7 +157,7 @@ int main()
 
     Renderer::Init();
 
-    Model oceanModel("dummy", "ocean.vs", "ocean.fs", false);
+    Model oceanModel("dummy", "ocean-BRDF.vs", "ocean-BRDF.fs", false);
 
     oceanModel.meshes.push_back(createOceanGrid(512, 200.0f));
 
