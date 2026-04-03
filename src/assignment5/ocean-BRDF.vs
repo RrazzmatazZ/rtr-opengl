@@ -5,9 +5,14 @@ layout (location = 0) in vec3 aPos;
 out vec3 WorldPos;
 out vec3 ViewDir;
 
-const int NUM_WAVES = 60; // 对应您 cpp 中的前 60 个波浪
-uniform vec4 u_Waves[NUM_WAVES];
-uniform vec4 u_WaveParams[NUM_WAVES];
+// 数组分配的硬性上限（必须与 Fragment Shader 保持绝对一致）
+const int MAX_WAVES = 60;
+
+// CPU 传入的实际可变波浪数量
+uniform int u_ActiveWaves;
+
+uniform vec4 u_Waves[MAX_WAVES];
+uniform vec4 u_WaveParams[MAX_WAVES];
 
 uniform mat4 model;
 uniform mat4 view;
@@ -29,12 +34,12 @@ void main() {
     vec3 p = worldPosData.xyz;
 
     float distanceToCam = length(u_CameraPos - p);
-    float L = distanceToCam * 0.005;
+    float L = max(distanceToCam * 0.005, 0.001);
 
     vec3 displacement = vec3(0.0);
 
-    // 【几何置换】：Eq. 2
-    for(int i = 0; i < NUM_WAVES; ++i) {
+    int loopCount = min(u_ActiveWaves, MAX_WAVES);
+    for(int i = 0; i < loopCount; ++i) {
         float k_x = u_Waves[i].x;
         float k_y = u_Waves[i].y;
         float h = u_Waves[i].z;
@@ -47,9 +52,11 @@ void main() {
             float phase = omega * u_Time - (k_x * p.x + k_y * p.z);
             float k_len = length(vec2(k_x, k_y));
 
-            // 安全钳制：防止由于 C++ 端暴力放大振幅导致波浪自我交叉打结
+            // add safe mode
             float h_safe = h;
-            if (k_len * h_safe > 1.0) h_safe = 1.0 / k_len;
+            if (k_len * h_safe > 0.95) {
+                h_safe = 0.95 / k_len;
+            }
 
             displacement.x += w_p * (k_x / k_len) * h_safe * sin(phase);
             displacement.z += w_p * (k_y / k_len) * h_safe * sin(phase);

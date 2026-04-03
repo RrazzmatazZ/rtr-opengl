@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <filesystem>
+#include <algorithm>
 
 #include "utils/Renderer.h"
 #include "utils/Model.h"
@@ -13,6 +14,7 @@
 #include "utils/Shader.h"
 #include "utils/Camera.h"
 #include "generator.hpp"
+#include "utils/Skybox.h"
 
 const std::filesystem::path RESOURCE_ROOT = "/Users/dodge/programs/avr/rtr/rtr-opengl/src/assignment5";
 
@@ -26,7 +28,7 @@ std::string Path(const std::string& subPath)
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
-Camera camera(glm::vec3(0.0f, 5.0f, 15.0f));
+Camera camera(glm::vec3(0.0f, 3.0f, 15.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -73,7 +75,6 @@ Mesh createOceanGrid(int resolution, float size)
     float halfSize = size / 2.0f;
     float step = size / (float)resolution;
 
-    // generate vertices
     for (int i = 0; i <= resolution; ++i)
     {
         for (int j = 0; j <= resolution; ++j)
@@ -90,12 +91,10 @@ Mesh createOceanGrid(int resolution, float size)
                 v.m_BoneIDs[k] = 0;
                 v.m_Weights[k] = 0.0f;
             }
-
             vertices.push_back(v);
         }
     }
 
-    // Triangles
     for (int i = 0; i < resolution; ++i)
     {
         for (int j = 0; j < resolution; ++j)
@@ -108,23 +107,21 @@ Mesh createOceanGrid(int resolution, float size)
             indices.push_back(topLeft);
             indices.push_back(bottomLeft);
             indices.push_back(topRight);
-
             indices.push_back(topRight);
             indices.push_back(bottomLeft);
             indices.push_back(bottomRight);
         }
     }
-
     return Mesh(vertices, indices, textures);
 }
 
 
-float windSpeed = 20.0f;
-int numWaves = 5000;
-float minWave  = 1.0f;
-float maxWave  = 20.f;
-float amplitudeAmplify = 5.0f;
-float timespec = 0.5f;
+float windSpeed = 10.0f;
+int numWaves = 60;
+float minWave = 0.05f;
+float maxWave = 50.0f;
+float amplitudeAmplify = 1.0f;
+float timespec = 1.2f;
 
 
 int main()
@@ -138,7 +135,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ocean Rendering Prototype - V1", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ocean Rendering V2 (Dynamic LOD)", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -155,17 +152,32 @@ int main()
         return -1;
     }
 
+    std::vector<std::string> skybox_paths = {
+        RE("skybox/miramar_lf.tga"),
+        RE("skybox/miramar_rt.tga"),
+        RE("skybox/miramar_up.tga"),
+        RE("skybox/miramar_dn.tga"),
+        RE("skybox/miramar_ft.tga"),
+        RE("skybox/miramar_bk.tga"),
+
+    };
+    Skybox skybox = Skybox(skybox_paths,RE("skybox/skybox.vs"), RE("skybox/skybox.fs"));
+
     Renderer::Init();
 
     Model oceanModel("dummy", "ocean-BRDF.vs", "ocean-BRDF.fs", false);
 
     oceanModel.meshes.push_back(createOceanGrid(512, 200.0f));
 
-
     auto waveParams = OceanWaveGenerator::generateWaves(numWaves, windSpeed, minWave, maxWave);
 
     oceanModel.modelShader->use();
-    for (int i = 0; i < numWaves; ++i)
+
+    oceanModel.modelShader->setInt("u_ActiveWaves", numWaves);
+
+    int uploadCount = std::min(numWaves, 60);
+
+    for (int i = 0; i < uploadCount; ++i)
     {
         float visualAmplitude = waveParams[i].amplitude * amplitudeAmplify;
 
@@ -178,8 +190,8 @@ int main()
                     waveParams[i].lambda, 0.0f, 0.0f, 0.0f);
     }
 
-    oceanModel.modelShader->setVec3("u_SunDir", glm::normalize(glm::vec3(1.0f, 0.5f, -1.0f)));
-    oceanModel.modelShader->setVec3("u_SunColor", glm::vec3(1.0f, 0.9f, 0.7f) * 5.0f);
+    oceanModel.modelShader->setVec3("u_SunDir", glm::normalize(glm::vec3(0.5f, 0.15f, -1.0f)));
+    oceanModel.modelShader->setVec3("u_SunColor", glm::vec3(1.0f, 0.85f, 0.6f) * 12.0f);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -191,11 +203,13 @@ int main()
 
         processInput(window);
 
-        glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+        glClearColor(0.7f, 0.85f, 0.95f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float aspectRatio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
         Renderer::BeginScene(camera, aspectRatio);
+
+        Renderer::SetSkybox(skybox);
 
         glm::mat4 modelMatrix = glm::mat4(1.0f);
 
