@@ -26,7 +26,6 @@ float computeWeight(float lambda, float L) {
 }
 
 // 针对高斯/Beckmann分布的 Lambda 遮蔽函数有理近似
-// 替代了论文中 GLSL 无法直接计算的 erfc 误差函数
 float computeLambda(float a) {
     if (a >= 1.6) return 0.0;
     return (1.0 - 1.259 * a + 0.396 * a * a) / (3.535 * a + 2.181 * a * a);
@@ -40,7 +39,6 @@ void main() {
     vec3 dp_dx = vec3(1.0, 0.0, 0.0);
     vec3 dp_dz = vec3(0.0, 0.0, 1.0);
 
-    // 注意：shader 中的 sigma_x/y 在累加后实际上代表的是论文中的方差 (sigma^2)
     float sigma_x = 0.0;
     float sigma_y = 0.0;
 
@@ -94,7 +92,7 @@ void main() {
     float fresnel_sky = R0 + (1.0 - R0) * pow(1.0 - max(dot(ViewDir, Normal), 0.0), 5.0);
     vec3 reflectDir = reflect(-ViewDir, Normal);
 
-    //#region Sun BRDF (Strictly following Ross et al. / Bruneton 2010)
+    //#region Sun BRDF
     vec3 SL = normalize(u_SunDir);
     vec3 V = ViewDir;
     vec3 H = normalize(SL + V);
@@ -106,24 +104,41 @@ void main() {
     vec3 tangentX = normalize(dp_dx);
     vec3 tangentY = normalize(dp_dz);
 
-    // 依照论文 Section 5.1 指示：将方差 clamp 到一个最小值，用来近似积分太阳圆盘的面积 (Dirac 避免)
-    // 这里的变量代表方差(Variance, 即论文里的 sigma^2)
-    float min_var = 0.002;
-    float sx2 = max(sigma_x, min_var);
-    float sy2 = max(sigma_y, min_var);
+    //#region 艺术化光轨控制 (Artistic Sun Trail Control)
+    // 彻底恢复并改良你的方案：解绑宽度与长度的衰减关系！
 
-    // 1. 微表面斜率 (Microfacet slopes zeta_hx, zeta_hy) - 推导自 Eq. 6
+    // 基础方差 (确保近处脚下的光斑足够大)
+    float min_var = 0.02;
+    float base_sx2 = max(sigma_x, min_var);
+    float base_sy2 = max(sigma_y, min_var);
+
+    // 1. 控制【收束力度】(Width)：只对横向方差 sx2 应用强距离衰减
+    // 指数衰减比你原来的公式收缩得更坚决，数值 narrowRate 可以随意调大调小
+    float narrowRate = 0.05; // 越大远处收得越细
+    float distanceDecay = exp(-distanceToCam * narrowRate);
+    float sx2 = base_sx2 * mix(0.0001, 5.0, distanceDecay); // 远处极限压缩到 0.1% 宽度
+
+    // 2. 控制【光轨长度】(Length)：纵向方差 sy2 不受距离衰减，反而独立放大
+    // 就是因为你之前把 sy2 也衰减了，光轨才会过早断掉
+    float trailLength = 1.5; // 大于1拉长光轨，小于1缩短光轨
+    float sy2 = base_sy2 * trailLength;
+
+    // 3. 视线掠射角压榨（保留你的优秀思路，增强远处的锐利度）
+    float grazingFactor = pow(NdotV, 0.4);
+    sx2 *= mix(0.1, 1.0, grazingFactor);
+    //#endregion
+
+    // 1. 微表面斜率 (Microfacet slopes zeta_hx, zeta_hy)
     float z_hx = -dot(H, tangentX) / NdotH;
     float z_hy = -dot(H, tangentY) / NdotH;
 
-    // 2. 高斯斜率概率分布 p(zeta_h) - Eq. 7
+    // 2. 高斯斜率概率分布 p(zeta_h)
     float exp_term = exp(-0.5 * ((z_hx * z_hx) / sx2 + (z_hy * z_hy) / sy2));
-    float p_zeta = exp_term / (6.2831853 * sqrt(sx2 * sy2)); // 2 * PI = 6.2831853
+    float p_zeta = exp_term / (6.2831853 * sqrt(sx2 * sy2));
 
-    // 3. 遮蔽函数的自变量 a_v, a_l - 简化版 Eq. 8
+    // 3. 遮蔽函数的自变量 a_v, a_l
     float V_tx = dot(V, tangentX);
     float V_ty = dot(V, tangentY);
-    // a_i = cos_theta / sqrt(2 * (sigma_x^2 * tx^2 + sigma_y^2 * ty^2))
     float a_v = NdotV / sqrt(2.0 * max(sx2 * V_tx * V_tx + sy2 * V_ty * V_ty, 1e-7));
 
     float L_tx = dot(SL, tangentX);
@@ -134,18 +149,17 @@ void main() {
     float lambda_v = computeLambda(a_v);
     float lambda_l = computeLambda(a_l);
 
-    // 4. 菲涅尔项 (Schlick's approximation) - Eq. 14
+    // 4. 菲涅尔项
     float VdotH = max(dot(V, H), 0.0);
     float fresnel_sun = R0 + (1.0 - R0) * pow(1.0 - VdotH, 5.0);
 
-    // 5. 整合为公式 15 (Eq. 15)
-    // 注意: 公式 15 已经是反射亮度的最终表达式，代表了对点光源立体角的积分，
-    // 因此数学上在此处**不需要且不能**再乘一次 NdotL。
+    // 5. 整合为公式 15
     float h_z4 = NdotH * NdotH * NdotH * NdotH;
     float denominator = 4.0 * h_z4 * NdotV * (1.0 + lambda_v + lambda_l);
 
-    // 太阳光反射的最终辐射强度 (I_sun)
+    // 太阳光反射的最终辐射强度
     float specular_mag = (p_zeta * fresnel_sun) / max(denominator, 1e-7);
+
     vec3 I_sun = u_SunColor * specular_mag;
     //#endregion Sun BRDF
 

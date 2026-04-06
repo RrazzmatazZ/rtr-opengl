@@ -25,8 +25,8 @@ std::string Path(const std::string& subPath)
 
 #define RE(p) Path(p).c_str()
 
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 Camera camera(glm::vec3(0.0f, 3.0f, 15.0f));
 float lastX = SCR_WIDTH / 2.0f;
@@ -190,7 +190,7 @@ int main()
                     waveParams[i].lambda, 0.0f, 0.0f, 0.0f);
     }
 
-    oceanModel.modelShader->setVec3("u_SunDir", glm::normalize(glm::vec3(0.5f, 0.15f, -1.0f)));
+    oceanModel.modelShader->setVec3("u_SunDir", glm::normalize(glm::vec3(0.5f, 0.4f, -2.0f)));
     oceanModel.modelShader->setVec3("u_SunColor", glm::vec3(1.0f, 0.85f, 0.6f) * 12.0f);
 
     while (!glfwWindowShouldClose(window))
